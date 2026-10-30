@@ -46,6 +46,7 @@ def process_video(video_path, text, font, font_size, color, placement, is_previe
         text_display_duration = max_duration 
 
     # --- Process Text Chunks ---
+    # --- Process Text Chunks ---
     words = text.split()
     chunks = []
     current_chunk = ""
@@ -61,13 +62,17 @@ def process_video(video_path, text, font, font_size, color, placement, is_previe
 
     if chunks:
         time_per_chunk = text_display_duration / len(chunks)
-        max_text_width = int(clip.w * 0.9) # 90% of screen width for margins
+        max_text_width = int(clip.w * 0.9)  # 90% of screen width for margins
         
         text_clips = []
         for i, chunk in enumerate(chunks):
+            # Appending '\n ' allocates bottom vertical headroom for descenders (g, y, p, q, j)
+            # without triggering 'margin' attribute errors in MoviePy v2.x
+            padded_chunk = chunk + "\n "
+            
             txt_clip = TextClip(
                 font=font, 
-                text=chunk, 
+                text=padded_chunk, 
                 font_size=font_size, 
                 color=color, 
                 stroke_color="black", 
@@ -76,14 +81,20 @@ def process_video(video_path, text, font, font_size, color, placement, is_previe
                 size=(max_text_width, None)  
             )
             
+            # Position safely using txt_clip.h so bottom alignment doesn't overflow the video frame
             if placement == "Top":
                 pos = ('center', 50)
             elif placement == "Center":
                 pos = 'center'
-            else: # Bottom
-                pos = ('center', clip.h - 100)
+            else:  # Bottom: dynamic offset accounting for clip height
+                pos = ('center', clip.h - txt_clip.h - 40)
                 
-            txt_clip = txt_clip.with_position(pos).with_start(i * time_per_chunk).with_duration(time_per_chunk)
+            txt_clip = (
+                txt_clip
+                .with_position(pos)
+                .with_start(i * time_per_chunk)
+                .with_duration(time_per_chunk)
+            )
             text_clips.append(txt_clip)
             
         final_video = CompositeVideoClip([clip] + text_clips)
@@ -125,8 +136,6 @@ with col1:
     crop_for_reels = st.toggle("Crop to 9:16 (TikTok/Reels)", value=False)
     fnt_names= ["Ravie","BRITANIC", "Arial", "Courier", "Times-Roman", "POSTERABLE"]
     font_paths = {
-        "Britanic": r"C:\Windows\Fonts\BRITANIC.ttf",
-        "Ravie": r"C:\Windows\Fonts\ravie.ttf",
         "Courier": r"C:\Windows\Fonts\cour.ttf",
         "Times-Roman": r"C:\Windows\Fonts\times.ttf",
         "Verdana": r"C:\Windows\Fonts\verdana.ttf"
