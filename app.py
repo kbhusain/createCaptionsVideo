@@ -123,13 +123,18 @@ with col1:
     
     st.subheader("Caption Options")
     crop_for_reels = st.toggle("Crop to 9:16 (TikTok/Reels)", value=False)
-    fnt_names= ["Ravie","BRITANIC", "Arial", "Courier", "Times-Roman", "POSTERABLE"]
-    font_paths = {
-        "Courier": r"fonts/cour.ttf",
-        "Times-Roman": r"fonts/times.ttf",
-        "Verdana": r"fonts/verdana.ttf"
-    }
-
+    
+    f_names = os.listdir("fonts")
+    #fnt_names= ["Ravie","BRITANIC", "Arial", "Courier", "Times-Roman", "POSTERABLE"]
+    fnt_names = [ x.replace(".ttf","") for x in f_names ]
+    # font_paths = {
+    #     "Courier": r"fonts/cour.ttf",
+    #     "Times-Roman": r"fonts/times.ttf",
+    #     "Verdana": r"fonts/verdana.ttf"
+    # }
+    
+    font_paths = dict(zip(fnt_names, [os.path.join("fonts", f) for f in f_names]))
+    print(font_paths);
     c1, c2 = st.columns(2)
     with c1:
         font_choice_name = st.selectbox("Font", list(font_paths.keys()))
