@@ -1,5 +1,5 @@
 import streamlit as st
-from moviepy import VideoFileClip, TextClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip
+from moviepy import VideoFileClip, TextClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip, vfx
 from gtts import gTTS
 import tempfile
 import os
@@ -7,29 +7,23 @@ import os
 st.set_page_config(page_title="Local Video Captioner", layout="wide")
 
 def process_video(video_path, text, font, font_size, color, placement, is_preview=False, crop_vertical=False, bg_music_path=None, bg_volume=0.2, add_tts=False):
-    # Load video and enforce max 30 seconds
-    clip = VideoFileClip(video_path)
-    max_duration = min(clip.duration, 30.0)
-    
-    if is_preview:
-        max_duration = min(max_duration, 5.0)
-        
-    clip = clip.subclipped(0, max_duration)
-    
+    # Load source video
+    raw_clip = VideoFileClip(video_path)
+
     # --- 9:16 Vertical Cropping ---
     if crop_vertical:
         target_ratio = 9 / 16
-        current_ratio = clip.w / clip.h
+        current_ratio = raw_clip.w / raw_clip.h
         if current_ratio > target_ratio:
-            new_width = clip.h * target_ratio
-            clip = clip.cropped(
-                x_center=clip.w / 2, 
-                y_center=clip.h / 2, 
+            new_width = raw_clip.h * target_ratio
+            raw_clip = raw_clip.cropped(
+                x_center=raw_clip.w / 2, 
+                y_center=raw_clip.h / 2, 
                 width=new_width, 
-                height=clip.h
+                height=raw_clip.h
             )
 
-    # --- Generate TTS Audio FIRST ---
+    # --- Generate TTS Audio FIRST to determine required duration ---
     tts_audio = None
     if add_tts and text.strip():
         tts_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
@@ -37,15 +31,32 @@ def process_video(video_path, text, font, font_size, color, placement, is_previe
         tts.save(tts_temp.name)
         
         tts_audio = AudioFileClip(tts_temp.name)
-        tts_duration = min(tts_audio.duration, max_duration)
-        tts_audio = tts_audio.subclipped(0, tts_duration)
-        
-        # Use voice duration to pace the text chunks
-        text_display_duration = tts_duration 
+        tts_duration = tts_audio.duration
     else:
-        text_display_duration = max_duration 
+        tts_duration = 0.0
 
-    # --- Process Text Chunks ---
+    # Determine required total duration
+    # If TTS is longer than the source video, target duration expands to match TTS
+    if is_preview:
+        target_duration = 5.0
+    else:
+        target_duration = max(raw_clip.duration, tts_duration) if tts_audio else raw_clip.duration
+
+    # --- Handle Video Looping or Trimming ---
+    if target_duration > raw_clip.duration:
+        # Audio/target duration is longer than the video: loop video to cover duration
+        clip = raw_clip.with_effects([vfx.Loop(duration=target_duration)])
+    else:
+        clip = raw_clip.subclipped(0, target_duration)
+
+    # Adjust TTS clip to target duration if preview capped it
+    if tts_audio is not None:
+        if is_preview and tts_audio.duration > target_duration:
+            tts_audio = tts_audio.subclipped(0, target_duration)
+        text_display_duration = min(tts_duration, target_duration)
+    else:
+        text_display_duration = target_duration
+
     # --- Process Text Chunks ---
     words = text.split()
     chunks = []
@@ -60,7 +71,7 @@ def process_video(video_path, text, font, font_size, color, placement, is_previe
     if current_chunk:
         chunks.append(current_chunk.strip())
 
-    if chunks:
+    if chunks and text_display_duration > 0:
         time_per_chunk = text_display_duration / len(chunks)
         max_text_width = int(clip.w * 0.9)  # 90% of screen width for margins
         
@@ -134,7 +145,7 @@ with col1:
     
     st.subheader("Caption Options")
     crop_for_reels = st.toggle("Crop to 9:16 (TikTok/Reels)", value=False)
-    fnt_names= ["Ravie","BRITANIC", "Arial", "Courier", "Times-Roman", "POSTERABLE"]
+    fnt_names = ["Ravie", "BRITANIC", "Arial", "Courier", "Times-Roman", "POSTERABLE"]
     font_paths = {
         "Courier": r"C:\Windows\Fonts\cour.ttf",
         "Times-Roman": r"C:\Windows\Fonts\times.ttf",
