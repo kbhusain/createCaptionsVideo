@@ -145,12 +145,14 @@ with col1:
     
     st.subheader("Caption Options")
     crop_for_reels = st.toggle("Crop to 9:16 (TikTok/Reels)", value=False)
-    fnt_names = ["Ravie", "BRITANIC", "Arial", "Courier", "Times-Roman", "POSTERABLE"]
-    font_paths = {
-        "Courier": r"C:\Windows\Fonts\cour.ttf",
-        "Times-Roman": r"C:\Windows\Fonts\times.ttf",
-        "Verdana": r"C:\Windows\Fonts\verdana.ttf"
-    }
+    f_names = os.listdir("fonts"); 
+    fnt_names = [x.split(".")[0] for x in f_names if x.lower().endswith(('.ttf', '.otf'))]
+    font_paths = {name: os.path.join("fonts", f) for name, f in zip(fnt_names, f_names)}
+    # font_paths = {
+    #     "Courier": r"C:\Windows\Fonts\cour.ttf",
+    #     "Times-Roman": r"C:\Windows\Fonts\times.ttf",
+    #     "Verdana": r"C:\Windows\Fonts\verdana.ttf"
+    # }
 
     c1, c2 = st.columns(2)
     with c1:
