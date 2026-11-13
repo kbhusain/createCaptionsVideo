@@ -112,12 +112,12 @@ def process_video(video_path, text, font, font_size, color, placement, is_previe
     return final_video
 
 # --- UI Layout ---
-st.title("Local Video Caption App")
+st.title("Local Video Caption")
 
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.header("1. Upload & Settings")
+    st.header("Upload & Settings")
     uploaded_file = st.file_uploader("Upload Video", type=["mp4", "mov"])
     caption_text = st.text_area("Caption Text", "Type your captions here. They will be spoken and split automatically.")
     
@@ -134,7 +134,7 @@ with col1:
     # }
     
     font_paths = dict(zip(fnt_names, [os.path.join("fonts", f) for f in f_names]))
-    print(font_paths);
+    #print(font_paths);
     c1, c2 = st.columns(2)
     with c1:
         font_choice_name = st.selectbox("Font", list(font_paths.keys()))
@@ -150,7 +150,7 @@ with col1:
     music_volume = st.slider("Music Volume", min_value=0.01, max_value=1.0, value=0.2, step=0.05)
 
 with col2:
-    st.header("2. Preview & Output")
+    st.header("Preview & Output")
     video_placeholder = st.empty()
     download_placeholder = st.empty()
     
